@@ -36,6 +36,7 @@
     "fastify-type-provider-zod": "^7.0.0",
     "jose": "^6.2.8",
     "otpauth": "^9.5.1",
+    "postgres": "^3.4.9",
     "zod": "^4.4.3"
   }
 }
