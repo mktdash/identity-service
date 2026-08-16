@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { REDACTED } from "../redaction.ts";
+import { REDACTED } from "#observability/redaction";
 import {
   errorSerializer,
   requestSerializer,
   responseSerializer,
-} from "../serializers.ts";
+} from "#observability/serializers";
 
 describe("requestSerializer", () => {
   const request = {

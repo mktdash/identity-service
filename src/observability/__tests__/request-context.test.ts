@@ -7,7 +7,7 @@ import {
   parseTraceparent,
   runWithRequestContext,
   setRequestPrincipal,
-} from "../request-context.ts";
+} from "#observability/request-context";
 
 describe("normalizeRequestId", () => {
   it("adopts the gateway's id", () => {

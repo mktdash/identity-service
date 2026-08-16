@@ -1,7 +1,7 @@
 import { Writable } from "node:stream";
 import { beforeAll, describe, expect, it } from "vitest";
-import { REDACTED } from "../redaction.ts";
-import { runWithRequestContext } from "../request-context.ts";
+import { REDACTED } from "#observability/redaction";
+import { runWithRequestContext } from "#observability/request-context";
 
 process.env["NODE_ENV"] = "test";
 process.env["SERVICE_NAME"] ??= "test-identity-service";
@@ -11,12 +11,12 @@ process.env["DATABASE_USER"] ??= "test";
 process.env["DATABASE_PASSWORD"] ??= "test";
 process.env["REDIS_HOST"] ??= "localhost";
 
-type CreateLogger = typeof import("../logger.ts").createLogger;
+type CreateLogger = typeof import("#observability/logger").createLogger;
 
 let createLogger: CreateLogger;
 
 beforeAll(async () => {
-  ({ createLogger } = await import("../logger.ts"));
+  ({ createLogger } = await import("#observability/logger"));
 });
 
 type Captured = {

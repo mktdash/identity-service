@@ -1,4 +1,4 @@
-import type { RequestContext } from "../observability/request-context.ts";
+import type { RequestContext } from "#observability/request-context";
 
 declare module "fastify" {
   interface FastifyRequest {

@@ -1,10 +1,7 @@
 import { Redis } from "ioredis";
-import { redisConnection } from "../../config/env.ts";
-import {
-  toRedisAuthOptions,
-  toRedisTlsOptions,
-} from "../../config/redis-url.ts";
-import { logger } from "../../observability/logger.ts";
+import { redisConnection } from "#config/env";
+import { toRedisAuthOptions, toRedisTlsOptions } from "#config/redis-url";
+import { logger } from "#observability/logger";
 
 const log = logger.child({ component: "redis" });
 const auth = toRedisAuthOptions(redisConnection);

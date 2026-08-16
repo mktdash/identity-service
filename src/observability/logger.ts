@@ -5,7 +5,7 @@ import {
   type Logger,
   type LoggerOptions,
 } from "pino";
-import { env, isDevelopment, isProduction, isTest } from "../config/env.ts";
+import { env, isDevelopment, isProduction, isTest } from "#config/env";
 import { REDACT_PATHS, REDACTED } from "./redaction.ts";
 import { logCorrelation } from "./request-context.ts";
 import { serializers } from "./serializers.ts";

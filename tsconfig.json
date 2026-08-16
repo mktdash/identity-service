@@ -5,6 +5,7 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "moduleDetection": "force",
+    "customConditions": ["source"],
     "types": ["node"],
 
     "rootDir": "./src",

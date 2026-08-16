@@ -8,7 +8,7 @@ import {
   REQUEST_ID_HEADER,
   runWithRequestContext,
   type RequestContext,
-} from "../observability/request-context.ts";
+} from "#observability/request-context";
 
 export function genReqId(request: {
   headers: Record<string, unknown>;

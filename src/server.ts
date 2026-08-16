@@ -1,12 +1,12 @@
 import closeWithGrace from "close-with-grace";
-import { env } from "./config/env.ts";
-import { checkDatabaseConnection, closeDatabase } from "./db/client.ts";
+import { env } from "#config/env";
+import { checkDatabaseConnection, closeDatabase } from "#db/client";
 import {
   checkRedisConnection,
   closeRedis,
   connectRedis,
-} from "./lib/redis/client.ts";
-import { flushLogger, logger } from "./observability/logger.ts";
+} from "#lib/redis/client";
+import { flushLogger, logger } from "#observability/logger";
 
 async function connectDependencies(): Promise<void> {
   const database = await checkDatabaseConnection();

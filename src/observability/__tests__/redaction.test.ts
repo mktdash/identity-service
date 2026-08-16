@@ -5,7 +5,7 @@ import {
   REDACTED,
   sanitizeUrl,
   truncate,
-} from "../redaction.ts";
+} from "#observability/redaction";
 
 describe("REDACT_PATHS", () => {
   it("has no duplicates — pino throws on a repeated path", () => {

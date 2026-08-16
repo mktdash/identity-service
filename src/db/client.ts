@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { toPostgresSslOption } from "../config/database-url.ts";
-import { databaseConnection, env } from "../config/env.ts";
-import { logger } from "../observability/logger.ts";
+import { toPostgresSslOption } from "#config/database-url";
+import { databaseConnection, env } from "#config/env";
+import { logger } from "#observability/logger";
 
 const log = logger.child({ component: "db" });
 
