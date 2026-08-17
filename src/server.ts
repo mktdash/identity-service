@@ -69,7 +69,7 @@ closeWithGrace({ delay: 10_000, logger }, async ({ err, signal, manual }) => {
 try {
   logger.info(
     { event: "startup", nodeEnv: env.NODE_ENV, nodeVersion: process.version },
-    "starting mktdash-identity-service",
+    "starting identity-service",
   );
 
   await connectDependencies();

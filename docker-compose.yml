@@ -1,19 +1,21 @@
-name: mktdash-identity
+name: identity-service
 
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: mktdash-identity-postgres
+    container_name: identity-service-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: mktdash_identity_owner
-      POSTGRES_PASSWORD: local_dev_owner_password
-      POSTGRES_DB: mktdash_identity
+      POSTGRES_USER: ${DATABASE_MIGRATION_USER:?set in .env - see .env.example}
+      POSTGRES_PASSWORD: ${DATABASE_MIGRATION_PASSWORD:?set in .env - see .env.example}
+      POSTGRES_DB: ${DATABASE_NAME:?set in .env - see .env.example}
+      APP_ROLE_NAME: ${DATABASE_USER:?set in .env - see .env.example}
+      APP_ROLE_PASSWORD: ${DATABASE_PASSWORD:?set in .env - see .env.example}
       POSTGRES_INITDB_ARGS: "--data-checksums"
       TZ: UTC
       PGTZ: UTC
     ports:
-      - "127.0.0.1:5433:5432"
+      - "${DOCKER_POSTGRES_BIND_HOST:-127.0.0.1}:${DATABASE_PORT:?set in .env - see .env.example}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -24,7 +26,11 @@ services:
       - -c
       - log_min_duration_statement=500
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U mktdash_identity_owner -d mktdash_identity" ]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DATABASE_MIGRATION_USER} -d ${DATABASE_NAME}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -37,24 +43,25 @@ services:
 
   redis:
     image: redis:8-alpine
-    container_name: mktdash-identity-redis
+    container_name: identity-service-redis
     restart: unless-stopped
     environment:
       TZ: UTC
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?set in .env - see .env.example}
     ports:
-      - "127.0.0.1:6380:6379"
+      - "${DOCKER_REDIS_BIND_HOST:-127.0.0.1}:${REDIS_PORT:?set in .env - see .env.example}:6379"
     volumes:
       - redis-data:/data
     command:
       - redis-server
       - --requirepass
-      - local_dev_redis_password
+      - ${REDIS_PASSWORD:?set in .env - see .env.example}
       - --maxmemory-policy
       - noeviction
       - --appendonly
       - "yes"
     healthcheck:
-      test: [ "CMD-SHELL", "redis-cli -a local_dev_redis_password --no-auth-warning ping | grep -q PONG" ]
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
       interval: 5s
       timeout: 5s
       retries: 12
