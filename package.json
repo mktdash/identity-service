@@ -5,8 +5,38 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
+  "imports": {
+    "#config/*": {
+      "source": "./src/config/*.ts",
+      "default": "./dist/config/*.js"
+    },
+    "#db/*": {
+      "source": "./src/db/*.ts",
+      "default": "./dist/db/*.js"
+    },
+    "#lib/*": {
+      "source": "./src/lib/*.ts",
+      "default": "./dist/lib/*.js"
+    },
+    "#modules/*": {
+      "source": "./src/modules/*.ts",
+      "default": "./dist/modules/*.js"
+    },
+    "#observability/*": {
+      "source": "./src/observability/*.ts",
+      "default": "./dist/observability/*.js"
+    },
+    "#plugins/*": {
+      "source": "./src/plugins/*.ts",
+      "default": "./dist/plugins/*.js"
+    },
+    "#types/*": {
+      "source": "./src/types/*.ts",
+      "default": "./dist/types/*.js"
+    }
+  },
   "scripts": {
-    "dev": "node --watch --env-file=.env src/server.ts",
+    "dev": "node --watch --env-file=.env --conditions=source src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -21,11 +51,11 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "seed:system": "node --env-file=.env seed/runners/system.seed.ts",
-    "seed:dev": "node --env-file=.env seed/runners/dev.seed.ts",
-    "key:generate": "node --env-file=.env scripts/generate-signing-key.ts",
-    "key:rotate": "node --env-file=.env scripts/rotate-signing-key.ts",
-    "verify:rls": "node --env-file=.env scripts/verify-rls.ts"
+    "seed:system": "node --env-file=.env --conditions=source seed/runners/system.seed.ts",
+    "seed:dev": "node --env-file=.env --conditions=source seed/runners/dev.seed.ts",
+    "key:generate": "node --env-file=.env --conditions=source scripts/generate-signing-key.ts",
+    "key:rotate": "node --env-file=.env --conditions=source scripts/rotate-signing-key.ts",
+    "verify:rls": "node --env-file=.env --conditions=source scripts/verify-rls.ts"
   },
   "devEngines": {
     "packageManager": {
