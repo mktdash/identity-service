@@ -40,6 +40,58 @@ const envSchema = z.object({
   REDIS_PASSWORD: z.string().default(""),
   REDIS_DB: z.coerce.number().int().min(0).max(15).default(0),
   REDIS_TLS: z.enum(REDIS_TLS_MODES).default("disable"),
+  JWT_ISSUER: z.string().min(1).max(255),
+  JWT_AUDIENCE: z.string().min(1).max(255),
+  JWT_SIGNING_KEY: z.string().min(1),
+  JWT_SIGNING_KEY_ID: z
+    .string()
+    .max(128)
+    .default("")
+    .transform((value) => (value.length === 0 ? undefined : value)),
+  ACCESS_TOKEN_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(60)
+    .max(900)
+    .default(900),
+  REFRESH_TOKEN_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(3_600)
+    .max(90 * 24 * 60 * 60)
+    .default(30 * 24 * 60 * 60),
+  TRUST_PROXY: z
+    .string()
+    .default("1")
+    .refine(
+      (value) => !["true", "false"].includes(value.trim().toLowerCase()),
+      "must be a hop count or a CIDR list, never a boolean — see src/config/env.ts",
+    )
+    .refine((value) => {
+      const trimmed = value.trim();
+      if (/^\d+$/u.test(trimmed)) {
+        return Number(trimmed) >= 1 && Number(trimmed) <= 10;
+      }
+      return trimmed.split(",").every((entry) => entry.trim().length > 0);
+    }, "must be an integer hop count between 1 and 10, or a comma-separated IP/CIDR list"),
+
+  CORS_ALLOWED_ORIGINS: z.string().default(""),
+  SWAGGER_UI_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  BODY_LIMIT_BYTES: z.coerce
+    .number()
+    .int()
+    .min(1_024)
+    .max(1_048_576)
+    .default(65_536),
+  REQUEST_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .max(60_000)
+    .default(15_000),
 });
 
 const parsed = envSchema
@@ -101,3 +153,14 @@ export const redisConnection: RedisConnectionParts = {
 export const redisUrl = composeRedisUrl(redisConnection);
 
 export const redisUrlRedacted = composeRedactedRedisUrl(redisConnection);
+
+export const trustProxy: number | string[] = /^\d+$/u.test(
+  env.TRUST_PROXY.trim(),
+)
+  ? Number(env.TRUST_PROXY.trim())
+  : env.TRUST_PROXY.split(",").map((entry) => entry.trim());
+
+export const corsAllowedOrigins: readonly string[] =
+  env.CORS_ALLOWED_ORIGINS.split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);

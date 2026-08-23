@@ -4,4 +4,8 @@ declare module "fastify" {
   interface FastifyRequest {
     readonly ctx: RequestContext;
   }
+
+  interface FastifyContextConfig {
+    public?: boolean;
+  }
 }
