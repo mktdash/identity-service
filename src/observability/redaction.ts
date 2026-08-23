@@ -26,6 +26,8 @@ const CREDENTIAL_KEYS = [
   "recoveryCodes",
   "otp",
   "otpCode",
+  "verificationCode",
+  "emailVerificationCode",
   "assertion",
   "samlResponse",
   "privateKey",

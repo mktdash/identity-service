@@ -53,6 +53,7 @@
     "db:studio": "drizzle-kit studio",
     "seed:system": "node --env-file=.env --conditions=source seed/runners/system.seed.ts",
     "seed:dev": "node --env-file=.env --conditions=source seed/runners/dev.seed.ts",
+    "openapi:generate": "node --env-file=.env --conditions=source scripts/generate-openapi.ts",
     "key:generate": "node --env-file=.env --conditions=source scripts/generate-signing-key.ts",
     "key:rotate": "node --env-file=.env --conditions=source scripts/rotate-signing-key.ts",
     "verify:rls": "node --env-file=.env --conditions=source scripts/verify-rls.ts"

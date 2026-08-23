@@ -1,4 +1,6 @@
+import { shutdownTracing } from "#observability/tracing";
 import closeWithGrace from "close-with-grace";
+import { buildApp } from "./app.ts";
 import { env } from "#config/env";
 import { checkDatabaseConnection, closeDatabase } from "#db/client";
 import {
@@ -51,21 +53,6 @@ async function connectDependencies(): Promise<void> {
   );
 }
 
-closeWithGrace({ delay: 10_000, logger }, async ({ err, signal, manual }) => {
-  if (err) {
-    logger.fatal(
-      { err, event: "shutdown" },
-      "shutting down after an unhandled error",
-    );
-  } else {
-    logger.info({ event: "shutdown", signal, manual }, "shutting down");
-  }
-
-  await closeDatabase();
-  await closeRedis();
-  await flushLogger();
-});
-
 try {
   logger.info(
     { event: "startup", nodeEnv: env.NODE_ENV, nodeVersion: process.version },
@@ -74,14 +61,36 @@ try {
 
   await connectDependencies();
 
+  const app = await buildApp();
+
+  closeWithGrace({ delay: 10_000, logger }, async ({ err, signal, manual }) => {
+    if (err) {
+      logger.fatal(
+        { err, event: "shutdown" },
+        "shutting down after an unhandled error",
+      );
+    } else {
+      logger.info({ event: "shutdown", signal, manual }, "shutting down");
+    }
+
+    await app.close();
+    await closeDatabase();
+    await closeRedis();
+    await shutdownTracing().catch(() => undefined);
+    await flushLogger();
+  });
+
+  await app.listen({ port: env.PORT, host: env.HOST });
+
   logger.info(
     { event: "startup_complete", port: env.PORT, host: env.HOST },
-    "dependencies connected — HTTP server not implemented yet (phase 1 spine)",
+    "identity-service listening",
   );
 } catch (error) {
   logger.fatal({ err: error, event: "startup_failed" }, "startup failed");
   await closeDatabase().catch(() => undefined);
   await closeRedis().catch(() => undefined);
+  await shutdownTracing().catch(() => undefined);
   await flushLogger();
   process.exit(1);
 }
