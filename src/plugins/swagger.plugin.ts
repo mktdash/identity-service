@@ -12,7 +12,7 @@ async function swaggerPlugin(app: FastifyInstance): Promise<void> {
     openapi: {
       openapi: "3.1.0",
       info: {
-        title: "mktdash-identity-service",
+        title: "identity-service",
         description:
           "Authentication and authorization for Marketing Dashboard. Never called directly from the internet — the gateway verifies JWKS and forwards.",
         version: OPENAPI_DOCUMENT_VERSION,
@@ -24,6 +24,11 @@ async function swaggerPlugin(app: FastifyInstance): Promise<void> {
           description: "Sign-up, login, token lifecycle",
         },
         { name: "health", description: "Liveness and readiness probes" },
+        {
+          name: "tokens",
+          description:
+            "JWKS publication and signing-key rotation. Public key material only.",
+        },
       ],
       components: {
         securitySchemes: {

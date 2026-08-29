@@ -10,6 +10,20 @@ export const JWT_ALGORITHM = "EdDSA";
 
 export const REFRESH_TOKEN_BYTES = 32;
 
+export const JWKS_ROUTE = "/.well-known/jwks.json";
+
+export const JWKS_CACHE = {
+  maxAgeSeconds: 300,
+  staleWhileRevalidateSeconds: 300,
+  staleIfErrorSeconds: 86_400,
+} as const;
+
+export const JWKS_CACHE_CONTROL = `public, max-age=${JWKS_CACHE.maxAgeSeconds}, stale-while-revalidate=${JWKS_CACHE.staleWhileRevalidateSeconds}, stale-if-error=${JWKS_CACHE.staleIfErrorSeconds}`;
+
+export const JWKS_CLOCK_SKEW_SECONDS = 60;
+
+export const PROBE_ROUTES: ReadonlySet<string> = new Set(["/health", "/ready"]);
+
 export const ROLE_SLUGS = {
   superAdmin: "super_admin",
   admin: "admin",
@@ -52,6 +66,43 @@ export const EMAIL_VERIFICATION = {
   maxAttempts: 5,
   resendCooldownSeconds: 60,
   ttlSeconds: 15 * 60,
+} as const;
+
+export const PRODUCT_NAME = "Marketing Dashboard";
+
+export const MAIL_CATEGORIES = {
+  emailVerification: "email_verification",
+} as const;
+
+export type MailCategory =
+  (typeof MAIL_CATEGORIES)[keyof typeof MAIL_CATEGORIES];
+
+export const MAIL_DELIVERY = {
+  maxAttempts: 3,
+  attemptTimeoutMs: 10_000,
+  retryBaseDelayMs: 300,
+  retryMaxDelayMs: 3_000,
+  verifyTimeoutMs: 5_000,
+} as const;
+
+export const SMTP_POOL = {
+  maxConnections: 3,
+  maxMessages: 100,
+  connectionTimeoutMs: 10_000,
+  greetingTimeoutMs: 10_000,
+  socketTimeoutMs: 20_000,
+} as const;
+
+export const MAIL_EVENTS = {
+  configurationWarning: "mail_configuration_warning",
+  transportReady: "mail_transport_ready",
+  transportUnavailable: "mail_transport_unavailable",
+  transportClosed: "mail_transport_closed",
+  delivered: "mail_delivered",
+  deliveryRetrying: "mail_delivery_retrying",
+  deliveryFailed: "mail_delivery_failed",
+  verificationCodeDelivered: "verification_email_delivered",
+  verificationCodeNotDelivered: "verification_email_delivery_failed",
 } as const;
 
 export const ORGANIZATION_NAME_LIMITS = { min: 1, max: 120 } as const;

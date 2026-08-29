@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "mktdash-identity-service",
+    "title": "identity-service",
     "description": "Authentication and authorization for Marketing Dashboard. Never called directly from the internet — the gateway verifies JWKS and forwards.",
     "version": "1.0.0"
   },
@@ -21,9 +21,7 @@
       "get": {
         "operationId": "getLiveness",
         "summary": "Liveness probe — process only, no dependency checks",
-        "tags": [
-          "health"
-        ],
+        "tags": ["health"],
         "responses": {
           "200": {
             "description": "Process liveness. Never reflects dependency health.",
@@ -34,9 +32,7 @@
                   "properties": {
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "ok"
-                      ]
+                      "enum": ["ok"]
                     },
                     "service": {
                       "type": "string"
@@ -45,11 +41,7 @@
                       "type": "number"
                     }
                   },
-                  "required": [
-                    "status",
-                    "service",
-                    "uptimeSeconds"
-                  ],
+                  "required": ["status", "service", "uptimeSeconds"],
                   "additionalProperties": false,
                   "description": "Process liveness. Never reflects dependency health."
                 }
@@ -63,9 +55,7 @@
       "get": {
         "operationId": "getReadiness",
         "summary": "Readiness probe — checks Postgres and Redis",
-        "tags": [
-          "health"
-        ],
+        "tags": ["health"],
         "responses": {
           "200": {
             "description": "Default Response",
@@ -76,40 +66,25 @@
                   "properties": {
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "ready",
-                        "degraded"
-                      ]
+                      "enum": ["ready", "degraded"]
                     },
                     "checks": {
                       "type": "object",
                       "properties": {
                         "postgres": {
                           "type": "string",
-                          "enum": [
-                            "up",
-                            "down"
-                          ]
+                          "enum": ["up", "down"]
                         },
                         "redis": {
                           "type": "string",
-                          "enum": [
-                            "up",
-                            "down"
-                          ]
+                          "enum": ["up", "down"]
                         }
                       },
-                      "required": [
-                        "postgres",
-                        "redis"
-                      ],
+                      "required": ["postgres", "redis"],
                       "additionalProperties": false
                     }
                   },
-                  "required": [
-                    "status",
-                    "checks"
-                  ],
+                  "required": ["status", "checks"],
                   "additionalProperties": false
                 }
               }
@@ -124,41 +99,146 @@
                   "properties": {
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "ready",
-                        "degraded"
-                      ]
+                      "enum": ["ready", "degraded"]
                     },
                     "checks": {
                       "type": "object",
                       "properties": {
                         "postgres": {
                           "type": "string",
-                          "enum": [
-                            "up",
-                            "down"
-                          ]
+                          "enum": ["up", "down"]
                         },
                         "redis": {
                           "type": "string",
-                          "enum": [
-                            "up",
-                            "down"
-                          ]
+                          "enum": ["up", "down"]
                         }
                       },
-                      "required": [
-                        "postgres",
-                        "redis"
-                      ],
+                      "required": ["postgres", "redis"],
                       "additionalProperties": false
                     }
                   },
-                  "required": [
-                    "status",
-                    "checks"
-                  ],
+                  "required": ["status", "checks"],
                   "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/jwks.json": {
+      "get": {
+        "operationId": "getJwks",
+        "summary": "JSON Web Key Set — the public keys that verify access tokens",
+        "tags": ["tokens"],
+        "description": "RFC 7517 JWK Set holding the Ed25519 public keys for this service's EdDSA access tokens. Public by necessity: the gateway and any load balancer in front of it fetch this before a caller has been identified, so it can never require authentication. The only route exempt from Cache-Control: no-store — it is served cacheable with max-age=300, stale-while-revalidate=300, stale-if-error=86400. That max-age is part of the key-rotation overlap window: a new key is published here before anything is signed with it, and the old key is retired no sooner than access-token TTL + max-age + clock skew. Clients that cache on their own timer (jose's createRemoteJWKSet defaults to 10 minutes and ignores Cache-Control) must set that timer to this max-age or the overlap window must be sized for theirs.",
+        "responses": {
+          "200": {
+            "description": "RFC 7517 JWK Set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "keys": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kty": {
+                            "type": "string",
+                            "enum": ["OKP"]
+                          },
+                          "crv": {
+                            "type": "string",
+                            "enum": ["Ed25519"]
+                          },
+                          "x": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Base64url-encoded Ed25519 public key. There is deliberately no `d` member — private key material never leaves the secret store."
+                          },
+                          "kid": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Matches the `kid` in the JWT protected header. Select on this, never on position."
+                          },
+                          "alg": {
+                            "type": "string",
+                            "enum": ["EdDSA"]
+                          },
+                          "use": {
+                            "type": "string",
+                            "enum": ["sig"]
+                          }
+                        },
+                        "required": ["kty", "crv", "x", "kid", "alg", "use"],
+                        "additionalProperties": false,
+                        "description": "RFC 7517 JWK. This schema is a positive allowlist: the serializer emits these members and nothing else, so no private component can reach the wire even if one were added upstream."
+                      },
+                      "description": "One entry today. During a key rotation this carries both the incoming and the outgoing key — the new key is published here before anything is signed with it, and the old one is retired no sooner than access-token TTL + this response's max-age + clock skew."
+                    }
+                  },
+                  "required": ["keys"],
+                  "additionalProperties": false,
+                  "description": "RFC 7517 JWK Set"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "RFC 9457 Problem Details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "Stable, machine-readable. Branch on this, never on `detail`."
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "description": "Field paths only — the submitted value is never echoed back.",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["path", "message"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": ["type", "title", "status", "code", "detail"],
+                  "additionalProperties": false,
+                  "description": "RFC 9457 Problem Details"
                 }
               }
             }
@@ -170,9 +250,7 @@
       "post": {
         "operationId": "registerOrganization",
         "summary": "Self-serve sign-up — creates the tenant and emails a code",
-        "tags": [
-          "authentication"
-        ],
+        "tags": ["authentication"],
         "description": "Creates an organization, its first workspace, the owning user and their credential, and a membership binding that user to the workspace with the Super Admin role — in one transaction. Returns NO tokens: the account is unusable until the email address is verified. Responds 202 and issues a six-digit verification code.",
         "requestBody": {
           "required": true,
@@ -203,10 +281,7 @@
                   },
                   "tenancy": {
                     "type": "string",
-                    "enum": [
-                      "company",
-                      "agency"
-                    ]
+                    "enum": ["company", "agency"]
                   }
                 },
                 "required": [
@@ -231,9 +306,7 @@
                   "properties": {
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "verification-required"
-                      ]
+                      "enum": ["verification-required"]
                     },
                     "email": {
                       "type": "string",
@@ -307,21 +380,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -372,21 +436,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -437,21 +492,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -502,21 +548,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -530,9 +567,7 @@
       "post": {
         "operationId": "verifyEmail",
         "summary": "Consume a verification code, completing sign-up",
-        "tags": [
-          "authentication"
-        ],
+        "tags": ["authentication"],
         "description": "Verifies the address, establishes a session and issues the token pair. POST, never GET: link-scanning proxies (Outlook Safe Links, Gmail's fetcher, corporate scanners) will fetch a URL before the human does, and a GET that consumes a single-use code produces 'the link doesn't work' reports nobody can reproduce.",
         "requestBody": {
           "required": true,
@@ -550,10 +585,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "email",
-                  "code"
-                ],
+                "required": ["email", "code"],
                 "additionalProperties": false
               }
             }
@@ -569,9 +601,7 @@
                   "properties": {
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "verified"
-                      ]
+                      "enum": ["verified"]
                     },
                     "redirectTo": {
                       "type": "string"
@@ -594,12 +624,7 @@
                           "type": "boolean"
                         }
                       },
-                      "required": [
-                        "id",
-                        "email",
-                        "fullName",
-                        "emailVerified"
-                      ],
+                      "required": ["id", "email", "fullName", "emailVerified"],
                       "additionalProperties": false
                     },
                     "organization": {
@@ -618,18 +643,10 @@
                         },
                         "tenancy": {
                           "type": "string",
-                          "enum": [
-                            "company",
-                            "agency"
-                          ]
+                          "enum": ["company", "agency"]
                         }
                       },
-                      "required": [
-                        "id",
-                        "name",
-                        "slug",
-                        "tenancy"
-                      ],
+                      "required": ["id", "name", "slug", "tenancy"],
                       "additionalProperties": false
                     },
                     "workspace": {
@@ -647,11 +664,7 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "id",
-                        "name",
-                        "slug"
-                      ],
+                      "required": ["id", "name", "slug"],
                       "additionalProperties": false
                     },
                     "membership": {
@@ -672,12 +685,7 @@
                         },
                         "dataScope": {
                           "type": "string",
-                          "enum": [
-                            "own",
-                            "team",
-                            "workspace",
-                            "organization"
-                          ]
+                          "enum": ["own", "team", "workspace", "organization"]
                         },
                         "permissionVersion": {
                           "type": "integer",
@@ -703,9 +711,7 @@
                         },
                         "tokenType": {
                           "type": "string",
-                          "enum": [
-                            "Bearer"
-                          ]
+                          "enum": ["Bearer"]
                         },
                         "expiresIn": {
                           "type": "integer",
@@ -791,21 +797,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -856,21 +853,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -921,21 +909,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -986,21 +965,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -1014,9 +984,7 @@
       "post": {
         "operationId": "resendVerificationCode",
         "summary": "Reissue a verification code",
-        "tags": [
-          "authentication"
-        ],
+        "tags": ["authentication"],
         "description": "Always responds 202 with the cooldown, whether or not the address exists or is already verified — answering truthfully would make this an account-existence oracle. The 60-second cooldown is enforced under a row lock regardless of the response.",
         "requestBody": {
           "required": true,
@@ -1031,9 +999,7 @@
                     "maxLength": 254
                   }
                 },
-                "required": [
-                  "email"
-                ],
+                "required": ["email"],
                 "additionalProperties": false
               }
             }
@@ -1049,9 +1015,7 @@
                   "properties": {
                     "status": {
                       "type": "string",
-                      "enum": [
-                        "sent"
-                      ]
+                      "enum": ["sent"]
                     },
                     "retryAfterSeconds": {
                       "type": "integer",
@@ -1059,10 +1023,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "status",
-                    "retryAfterSeconds"
-                  ],
+                  "required": ["status", "retryAfterSeconds"],
                   "additionalProperties": false
                 }
               }
@@ -1112,21 +1073,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -1177,21 +1129,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -1242,21 +1185,12 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "type",
-                    "title",
-                    "status",
-                    "code",
-                    "detail"
-                  ],
+                  "required": ["type", "title", "status", "code", "detail"],
                   "additionalProperties": false,
                   "description": "RFC 9457 Problem Details"
                 }
@@ -1281,6 +1215,10 @@
     {
       "name": "health",
       "description": "Liveness and readiness probes"
+    },
+    {
+      "name": "tokens",
+      "description": "JWKS publication and signing-key rotation. Public key material only."
     }
   ]
 }

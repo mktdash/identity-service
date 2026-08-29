@@ -11,6 +11,38 @@ import {
   REDIS_TLS_MODES,
   type RedisConnectionParts,
 } from "./redis-url.ts";
+import {
+  composeRedactedSmtpUrl,
+  inspectMailConfiguration,
+  MAIL_TRANSPORT_VALUES,
+  resolveMailTransport,
+  SMTP_SECURITY_MODES,
+  type MailConfigurationWarning,
+  type MailIdentity,
+  type MailTransportKind,
+  type SmtpConnectionParts,
+} from "./smtp.ts";
+
+const optionalEmail = z
+  .string()
+  .trim()
+  .max(254)
+  .default("")
+  .refine(
+    (value) => value.length === 0 || z.email().safeParse(value).success,
+    "must be a valid email address, or empty",
+  );
+
+const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/u;
+
+const headerSafeText = z
+  .string()
+  .trim()
+  .max(78)
+  .refine(
+    (value) => !CONTROL_CHARACTERS.test(value),
+    "must not contain control characters — they would break out of the mail header",
+  );
 
 const envSchema = z.object({
   NODE_ENV: z
@@ -92,6 +124,18 @@ const envSchema = z.object({
     .min(1_000)
     .max(60_000)
     .default(15_000),
+
+  WEB_APP_BASE_URL: z.url().default("http://localhost:3000"),
+
+  MAIL_TRANSPORT: z.enum(MAIL_TRANSPORT_VALUES).default(""),
+  MAIL_FROM_ADDRESS: optionalEmail,
+  MAIL_FROM_NAME: headerSafeText.default("Marketing Dashboard"),
+  MAIL_REPLY_TO_ADDRESS: optionalEmail,
+  SMTP_HOST: z.string().trim().max(255).default(""),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65_535).default(587),
+  SMTP_SECURITY: z.enum(SMTP_SECURITY_MODES).default("starttls"),
+  SMTP_USERNAME: z.string().trim().default(""),
+  SMTP_PASSWORD: z.string().trim().default(""),
 });
 
 const parsed = envSchema
@@ -102,6 +146,88 @@ const parsed = envSchema
         path: ["REDIS_PASSWORD"],
         message:
           "must be set when NODE_ENV=production — an unauthenticated Redis is not acceptable here",
+      });
+    }
+
+    const mailTransport = resolveMailTransport(
+      value.MAIL_TRANSPORT,
+      value.NODE_ENV,
+    );
+
+    if (value.NODE_ENV === "production" && mailTransport !== "smtp") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["MAIL_TRANSPORT"],
+        message:
+          "must be `smtp` when NODE_ENV=production — `console` writes a live verification code to the log pipeline and `noop` drops it, and either way sign-up can never complete",
+      });
+    }
+
+    if (mailTransport === "smtp") {
+      if (value.SMTP_HOST.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["SMTP_HOST"],
+          message: "must be set when MAIL_TRANSPORT=smtp",
+        });
+      }
+
+      if (value.MAIL_FROM_ADDRESS.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["MAIL_FROM_ADDRESS"],
+          message:
+            "must be set when MAIL_TRANSPORT=smtp — a relay with no envelope sender is rejected or silently spam-filed",
+        });
+      }
+
+      if (
+        value.NODE_ENV === "production" &&
+        value.SMTP_SECURITY === "disable"
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["SMTP_SECURITY"],
+          message:
+            "must be `starttls` or `implicit-tls` when NODE_ENV=production — `disable` sends SMTP AUTH credentials and every verification code in the clear",
+        });
+      }
+    }
+
+    const hasUsername = value.SMTP_USERNAME.length > 0;
+    const hasPassword = value.SMTP_PASSWORD.length > 0;
+
+    if (hasUsername !== hasPassword) {
+      ctx.addIssue({
+        code: "custom",
+        path: [hasUsername ? "SMTP_PASSWORD" : "SMTP_USERNAME"],
+        message:
+          "SMTP_USERNAME and SMTP_PASSWORD are set together or not at all — a half-configured login fails at the first send, not at boot",
+      });
+    }
+
+    if (
+      mailTransport === "smtp" &&
+      hasPassword &&
+      value.SMTP_SECURITY === "disable"
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["SMTP_SECURITY"],
+        message:
+          "cannot be `disable` while SMTP_USERNAME/SMTP_PASSWORD are set — that transmits the relay credential unencrypted. Use `starttls` (usually port 587) or `implicit-tls` (usually port 465)",
+      });
+    }
+
+    if (
+      value.NODE_ENV === "production" &&
+      !value.WEB_APP_BASE_URL.startsWith("https://")
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["WEB_APP_BASE_URL"],
+        message:
+          "must be https when NODE_ENV=production — it is rendered as a link in outbound identity email",
       });
     }
   })
@@ -153,6 +279,34 @@ export const redisConnection: RedisConnectionParts = {
 export const redisUrl = composeRedisUrl(redisConnection);
 
 export const redisUrlRedacted = composeRedactedRedisUrl(redisConnection);
+
+export const smtpConnection: SmtpConnectionParts = {
+  host: env.SMTP_HOST,
+  port: env.SMTP_PORT,
+  username: env.SMTP_USERNAME,
+  password: env.SMTP_PASSWORD,
+  security: env.SMTP_SECURITY,
+};
+
+export const smtpTargetRedacted = composeRedactedSmtpUrl(smtpConnection);
+
+export const mailTransportKind: MailTransportKind = resolveMailTransport(
+  env.MAIL_TRANSPORT,
+  env.NODE_ENV,
+);
+
+export const mailIdentity: MailIdentity = {
+  fromAddress: env.MAIL_FROM_ADDRESS,
+  fromName: env.MAIL_FROM_NAME,
+  replyToAddress: env.MAIL_REPLY_TO_ADDRESS,
+};
+
+export const mailConfigurationWarnings: readonly MailConfigurationWarning[] =
+  inspectMailConfiguration({
+    transport: mailTransportKind,
+    smtp: smtpConnection,
+    identity: mailIdentity,
+  });
 
 export const trustProxy: number | string[] = /^\d+$/u.test(
   env.TRUST_PROXY.trim(),

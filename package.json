@@ -1,5 +1,5 @@
 {
-  "name": "mktdash-identity-service",
+  "name": "identity-service",
   "version": "1.0.0",
   "description": "Authentication and authorization service for Marketing Dashboard.",
   "private": true,
@@ -36,9 +36,14 @@
     }
   },
   "scripts": {
-    "dev": "node --watch --env-file=.env --conditions=source src/server.ts",
+    "dev": "NODE_ENV=development node --watch --env-file=.env.development --conditions=source src/server.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
+    "start": "NODE_ENV=production node --env-file-if-exists=.env.production dist/server.js",
+    "prod": "pnpm run build && pnpm run start",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:ps": "docker compose ps",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:tools": "tsc -p tsconfig.tools.json --noEmit",
     "lint": "eslint .",
@@ -51,12 +56,12 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "seed:system": "node --env-file=.env --conditions=source seed/runners/system.seed.ts",
-    "seed:dev": "node --env-file=.env --conditions=source seed/runners/dev.seed.ts",
-    "openapi:generate": "node --env-file=.env --conditions=source scripts/generate-openapi.ts",
-    "key:generate": "node --env-file=.env --conditions=source scripts/generate-signing-key.ts",
-    "key:rotate": "node --env-file=.env --conditions=source scripts/rotate-signing-key.ts",
-    "verify:rls": "node --env-file=.env --conditions=source scripts/verify-rls.ts"
+    "seed:system": "node --env-file-if-exists=.env.development --conditions=source seed/runners/system.seed.ts",
+    "seed:dev": "node --env-file=.env.development --conditions=source seed/runners/dev.seed.ts",
+    "openapi:generate": "node --env-file-if-exists=.env.development --conditions=source scripts/generate-openapi.ts",
+    "key:generate": "node --env-file-if-exists=.env.development --conditions=source scripts/generate-signing-key.ts",
+    "key:rotate": "node --env-file-if-exists=.env.development --conditions=source scripts/rotate-signing-key.ts",
+    "verify:rls": "node --env-file-if-exists=.env.development --conditions=source scripts/verify-rls.ts"
   },
   "devEngines": {
     "packageManager": {
@@ -90,6 +95,7 @@
     "fastify-type-provider-zod": "^7.0.0",
     "ioredis": "^6.0.0",
     "jose": "^6.2.8",
+    "nodemailer": "^9.0.5",
     "otpauth": "^9.5.1",
     "pino": "^10.3.1",
     "postgres": "^3.4.9",
@@ -99,6 +105,7 @@
     "@eslint/js": "^10.0.1",
     "@faker-js/faker": "^10.5.0",
     "@types/node": "^26.2.0",
+    "@types/nodemailer": "^8.0.1",
     "@vitest/coverage-v8": "^4.1.10",
     "drizzle-kit": "^0.31.10",
     "eslint": "^10.8.1",
