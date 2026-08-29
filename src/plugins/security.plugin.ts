@@ -2,9 +2,10 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import type { FastifyInstance } from "fastify";
 import fp from "fastify-plugin";
+import { JWKS_ROUTE } from "#config/constants";
 import { corsAllowedOrigins, isProduction } from "#config/env";
 
-const CACHEABLE_ROUTES = new Set(["/.well-known/jwks.json"]);
+const CACHEABLE_ROUTES: ReadonlySet<string> = new Set([JWKS_ROUTE]);
 
 async function securityPlugin(app: FastifyInstance): Promise<void> {
   await app.register(helmet, {

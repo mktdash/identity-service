@@ -21,6 +21,7 @@ export const ERROR_CODES = {
   invalidVerificationCode: "invalid_verification_code",
   verificationCodeExpired: "verification_code_expired",
   tooManyVerificationAttempts: "too_many_verification_attempts",
+  signingKeyUnavailable: "signing_key_unavailable",
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

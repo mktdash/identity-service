@@ -5,12 +5,22 @@ import {
   type DatabaseSslMode,
 } from "./src/config/database-url.ts";
 
+const envFile = `.env.${process.env.NODE_ENV ?? "development"}`;
+
+try {
+  process.loadEnvFile(envFile);
+} catch (error) {
+  if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+    throw error;
+  }
+}
+
 function required(name: string): string {
   const value = process.env[name];
 
   if (!value) {
     throw new Error(
-      `${name} is not set. Copy .env.example to .env — drizzle-kit needs the owning role ` +
+      `${name} is not set. Copy .env.example to ${envFile} — drizzle-kit needs the owning role ` +
         `(DATABASE_MIGRATION_USER / DATABASE_MIGRATION_PASSWORD) plus the shared ` +
         `DATABASE_HOST / DATABASE_PORT / DATABASE_NAME, not the application role, because ` +
         `the application role cannot run DDL.`,

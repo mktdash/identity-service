@@ -81,7 +81,7 @@ independent hardening measures; they are the reason the design is viable.
 `verify-email` answers an unknown address, a wrong code and an already-consumed
 code identically. `verify-email/resend` always answers `202 { status: "sent",
 retryAfterSeconds: 60 }` — including for addresses that do not exist, and
-including while cooling down. Returning the *true* cooldown remainder was a bug
+including while cooling down. Returning the _true_ cooldown remainder was a bug
 found during testing: it confirmed both that an address had a pending sign-up
 and roughly when it registered. mktdash-web's `unknown-address` failure code is
 therefore one this service never returns.
@@ -92,7 +92,7 @@ per 10 minutes is what carries that risk.
 
 **The tenancy bootstrap (migration 0004)**
 
-Verification must resolve which organization a user belongs to *before* a tenant
+Verification must resolve which organization a user belongs to _before_ a tenant
 scope exists, but `memberships` is scoped by organization. Resolved with
 `app_resolve_primary_scope(uuid)`, a `SECURITY DEFINER` function with a fixed
 signature that can only return rows for the single user passed in, with
@@ -105,12 +105,13 @@ Login, refresh and impersonation will all need this same function.
 
 **Open, and blocking a production deploy**
 
-- **Transactional email delivery is still undecided.** `lib/mail/
-  verification-code-mail.ts` is the seam. In development it prints the code to
-  the console; in production it logs an error and sends nothing, so **sign-up
-  cannot complete in production until a mail path is wired.** The code is never
-  written to the outbox — those rows are retained for months to years and must
-  never hold a live credential.
+- ~~**Transactional email delivery is still undecided.**~~ **Resolved by
+  ADR 0006**: delivery is SMTP via `nodemailer`, behind the `MailTransport`
+  interface in `lib/mail/transport.ts`, with `console` and `noop`
+  implementations for development and test. The code is still never written to
+  the outbox — those rows are retained for months to years and must never hold a
+  live credential — and it is kept out of the subject line, the preheader and
+  the URL for the same reason.
 - **`mktdash-web`'s `MIN_PASSWORD_LENGTH` is 8; this service requires 12.** Until
   that constant is raised, the client will accept passwords the server rejects
   with a `400` on `password`.

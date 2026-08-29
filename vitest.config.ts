@@ -21,7 +21,7 @@ export default defineConfig({
     restoreMocks: true,
     env: {
       NODE_ENV: "test",
-      DATABASE_HOST: "127a.0.0.1",
+      DATABASE_HOST: "127.0.0.1",
       DATABASE_PORT: "5433",
       DATABASE_NAME: "identity_test",
       DATABASE_USER: "identity_app",

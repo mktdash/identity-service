@@ -60,7 +60,7 @@ async function checkHibp(password: string): Promise<BreachCheckResult> {
   const response = await fetch(`${HIBP_RANGE_URL}/${prefix}`, {
     headers: {
       "Add-Padding": "true",
-      "User-Agent": "mktdash-identity-service",
+      "User-Agent": "identity-service",
     },
     signal: AbortSignal.timeout(HIBP_TIMEOUT_MS),
   });

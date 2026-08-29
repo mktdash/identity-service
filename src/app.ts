@@ -1,4 +1,4 @@
-import { fastify } from "fastify";
+import { fastify, LogController } from "fastify";
 import {
   serializerCompiler,
   validatorCompiler,
@@ -9,11 +9,13 @@ import { warmSigningKey } from "#lib/jwt/signer";
 import { logger } from "#observability/logger";
 import { authenticationRoutes } from "#modules/authentication/authentication.routes";
 import { healthRoutes } from "#modules/health/health.routes";
+import { tokensRoutes } from "#modules/tokens/tokens.routes";
 import errorHandlerPlugin from "#plugins/error-handler.plugin";
 import rateLimitPlugin from "#plugins/rate-limit.plugin";
 import requestContextPlugin, {
   genReqId,
 } from "#plugins/request-context.plugin";
+import requestLoggingPlugin from "#plugins/request-logging.plugin";
 import securityPlugin from "#plugins/security.plugin";
 import swaggerPlugin from "#plugins/swagger.plugin";
 
@@ -24,13 +26,14 @@ export async function buildApp() {
     trustProxy,
     bodyLimit: env.BODY_LIMIT_BYTES,
     requestTimeout: env.REQUEST_TIMEOUT_MS,
-    disableRequestLogging: false,
+    logController: new LogController({ disableRequestLogging: true }),
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
   await app.register(requestContextPlugin);
+  await app.register(requestLoggingPlugin);
   await app.register(errorHandlerPlugin);
   await app.register(securityPlugin);
   await app.register(rateLimitPlugin);
@@ -43,6 +46,7 @@ export async function buildApp() {
   );
 
   await app.register(healthRoutes);
+  await app.register(tokensRoutes);
   await app.register(authenticationRoutes, { prefix: "/v1/auth" });
 
   await app.ready();

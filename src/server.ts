@@ -1,8 +1,15 @@
 import { shutdownTracing } from "#observability/tracing";
 import closeWithGrace from "close-with-grace";
 import { buildApp } from "./app.ts";
-import { env } from "#config/env";
+import { MAIL_EVENTS } from "#config/constants";
+import {
+  env,
+  mailConfigurationWarnings,
+  mailTransportKind,
+  smtpTargetRedacted,
+} from "#config/env";
 import { checkDatabaseConnection, closeDatabase } from "#db/client";
+import { closeMailTransport, verifyMailTransport } from "#lib/mail/transport";
 import {
   checkRedisConnection,
   closeRedis,
@@ -53,6 +60,43 @@ async function connectDependencies(): Promise<void> {
   );
 }
 
+async function checkMailTransport(): Promise<void> {
+  for (const warning of mailConfigurationWarnings) {
+    logger.warn(
+      {
+        event: MAIL_EVENTS.configurationWarning,
+        warning: warning.code,
+        transport: mailTransportKind,
+      },
+      warning.message,
+    );
+  }
+
+  try {
+    const mail = await verifyMailTransport();
+
+    logger.info(
+      {
+        event: MAIL_EVENTS.transportReady,
+        transport: mail.kind,
+        target: mail.target,
+        from: env.MAIL_FROM_ADDRESS || "(not configured)",
+      },
+      "mail transport ready",
+    );
+  } catch (error) {
+    logger.error(
+      {
+        err: error,
+        event: MAIL_EVENTS.transportUnavailable,
+        transport: mailTransportKind,
+        target: smtpTargetRedacted,
+      },
+      "mail transport did not verify — sign-up will complete but no verification email will be delivered",
+    );
+  }
+}
+
 try {
   logger.info(
     { event: "startup", nodeEnv: env.NODE_ENV, nodeVersion: process.version },
@@ -60,6 +104,7 @@ try {
   );
 
   await connectDependencies();
+  await checkMailTransport();
 
   const app = await buildApp();
 
@@ -74,6 +119,7 @@ try {
     }
 
     await app.close();
+    await closeMailTransport();
     await closeDatabase();
     await closeRedis();
     await shutdownTracing().catch(() => undefined);
@@ -88,6 +134,7 @@ try {
   );
 } catch (error) {
   logger.fatal({ err: error, event: "startup_failed" }, "startup failed");
+  await closeMailTransport().catch(() => undefined);
   await closeDatabase().catch(() => undefined);
   await closeRedis().catch(() => undefined);
   await shutdownTracing().catch(() => undefined);
